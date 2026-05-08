@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     const nume = analysis?.structuredData?.nume || 'Necunoscut'
     const telefon = analysis?.structuredData?.telefon || body.message?.customer?.number || ''
-    const motiv = analysis?.structuredData?.motiv || analysis?.summary || 'Nedefinit'
+    const motiv = analysis?.structuredData?.motiv || 'Nedefinit'
 
     await notion.pages.create({
       parent: { database_id: process.env.NOTION_DATABASE_ID! },
