@@ -9,7 +9,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    // Vapi trimite datele la finalul apelului
     if (body.message?.type !== 'end-of-call-report') {
       return NextResponse.json({ ok: true })
     }
@@ -17,7 +16,6 @@ export async function POST(request: NextRequest) {
     const transcript = body.message?.transcript || ''
     const analysis = body.message?.analysis || {}
 
-    // Extragem datele din conversație
     const nume = analysis?.structuredData?.nume || 'Necunoscut'
     const telefon = analysis?.structuredData?.telefon || body.message?.customer?.number || ''
     const motiv = analysis?.structuredData?.motiv || analysis?.summary || 'Nedefinit'
@@ -38,7 +36,7 @@ export async function POST(request: NextRequest) {
           date: { start: new Date().toISOString() }
         },
         'Status': {
-          status: { name: 'Nou' }
+          select: { name: 'Nou' }
         }
       }
     })
