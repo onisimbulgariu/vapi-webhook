@@ -13,12 +13,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    const transcript = body.message?.transcript || ''
     const analysis = body.message?.analysis || {}
+    const structured = analysis?.structuredData || {}
 
-    const nume = analysis?.structuredData?.nume || 'Necunoscut'
-    const telefon = analysis?.structuredData?.telefon || body.message?.customer?.number || ''
-    const motiv = analysis?.structuredData?.motiv || 'Nedefinit'
+    const nume = structured.nume || 'Necunoscut'
+    const telefon = structured.telefon || body.message?.customer?.number || ''
+    const email = structured.email || ''
+    const firma = structured.firma || ''
+    const domeniu = structured.domeniu || ''
+    const problema = structured.problema || ''
+    const disponibilitate = structured.disponibilitate || ''
+
+    // Construim câmpul motiv concatenat
+    const motivParts = []
+    if (firma) motivParts.push(`Firma: ${firma}`)
+    if (domeniu) motivParts.push(`Domeniu: ${domeniu}`)
+    if (problema) motivParts.push(`Problema: ${problema}`)
+    if (email) motivParts.push(`Email: ${email}`)
+    if (disponibilitate) motivParts.push(`Disponibilitate: ${disponibilitate}`)
+    
+    const motiv = motivParts.length > 0 
+      ? motivParts.join(' | ') 
+      : structured.motiv || 'Nedefinit'
 
     await notion.pages.create({
       parent: { database_id: process.env.NOTION_DATABASE_ID! },
