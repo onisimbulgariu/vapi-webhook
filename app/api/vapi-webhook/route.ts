@@ -31,7 +31,7 @@ async function sendWhatsApp(telefon: string, nume: string, motiv: string) {
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
 
-  await fetch(url, {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Authorization': 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
@@ -43,14 +43,18 @@ async function sendWhatsApp(telefon: string, nume: string, motiv: string) {
       Body: mesaj,
     }).toString(),
   })
+
+  const result = await response.json()
+  console.log('Twilio response:', JSON.stringify(result))
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log('Body received:', JSON.stringify(body))
 
     // Detectăm sursa: ElevenLabs sau Vapi
-    const isElevenLabs = body.nume || body.telefon
+    const isElevenLabs = body.name || body.nume || body.telefon || body.serviciu
 
     let nume: string
     let telefon: string
@@ -58,7 +62,8 @@ export async function POST(request: NextRequest) {
 
     if (isElevenLabs) {
       // Date venite direct de la ElevenLabs tool
-      nume = body.nume || 'Necunoscut'
+      // Suportăm atât "name" cât și "nume" ca identifier
+      nume = body.name || body.nume || 'Necunoscut'
       telefon = body.telefon || ''
       const parts = []
       if (body.serviciu) parts.push(`Serviciu: ${body.serviciu}`)
