@@ -8,7 +8,6 @@ const notion = new Client({
 async function sendWhatsApp(telefon: string, nume: string, motiv: string) {
   if (!telefon || telefon === '') return
 
-  // Normalizăm numărul — adăugăm prefix România dacă e local
   let numarFormatat = telefon.replace(/\s/g, '')
   if (numarFormatat.startsWith('0')) {
     numarFormatat = '+4' + numarFormatat
@@ -21,7 +20,7 @@ async function sendWhatsApp(telefon: string, nume: string, motiv: string) {
   const authToken = process.env.TWILIO_AUTH_TOKEN
   const from = process.env.TWILIO_WHATSAPP_FROM
 
-  const mesaj = 
+  const mesaj =
     `Buna ziua, ${nume}! 👋\n\n` +
     `Va multumim ca ati apelat la *Frizeru*.\n\n` +
     `✅ Programarea dumneavoastra a fost inregistrata:\n` +
@@ -50,31 +49,38 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    if (body.message?.type !== 'end-of-call-report') {
-      return NextResponse.json({ ok: true })
+    // Detectăm sursa: ElevenLabs sau Vapi
+    const isElevenLabs = body.nume || body.telefon
+
+    let nume: string
+    let telefon: string
+    let motiv: string
+
+    if (isElevenLabs) {
+      // Date venite direct de la ElevenLabs tool
+      nume = body.nume || 'Necunoscut'
+      telefon = body.telefon || ''
+      const parts = []
+      if (body.serviciu) parts.push(`Serviciu: ${body.serviciu}`)
+      if (body.specialist) parts.push(`Specialist: ${body.specialist}`)
+      if (body.data) parts.push(`Data: ${body.data}`)
+      if (body.ora) parts.push(`Ora: ${body.ora}`)
+      motiv = parts.join(' | ') || 'Nedefinit'
+    } else {
+      // Date venite de la Vapi
+      if (body.message?.type !== 'end-of-call-report') {
+        return NextResponse.json({ ok: true })
+      }
+      const structured = body.message?.analysis?.structuredData || {}
+      nume = structured.nume || 'Necunoscut'
+      telefon = structured.telefon || body.message?.customer?.number || ''
+      const parts = []
+      if (structured.firma) parts.push(`Firma: ${structured.firma}`)
+      if (structured.problema) parts.push(`Problema: ${structured.problema}`)
+      if (structured.email) parts.push(`Email: ${structured.email}`)
+      if (structured.disponibilitate) parts.push(`Disponibilitate: ${structured.disponibilitate}`)
+      motiv = parts.join(' | ') || structured.motiv || 'Nedefinit'
     }
-
-    const analysis = body.message?.analysis || {}
-    const structured = analysis?.structuredData || {}
-
-    const nume = structured.nume || 'Necunoscut'
-    const telefon = structured.telefon || body.message?.customer?.number || ''
-    const email = structured.email || ''
-    const firma = structured.firma || ''
-    const domeniu = structured.domeniu || ''
-    const problema = structured.problema || ''
-    const disponibilitate = structured.disponibilitate || ''
-
-    const motivParts = []
-    if (firma) motivParts.push(`Firma: ${firma}`)
-    if (domeniu) motivParts.push(`Domeniu: ${domeniu}`)
-    if (problema) motivParts.push(`Problema: ${problema}`)
-    if (email) motivParts.push(`Email: ${email}`)
-    if (disponibilitate) motivParts.push(`Disponibilitate: ${disponibilitate}`)
-
-    const motiv = motivParts.length > 0
-      ? motivParts.join(' | ')
-      : structured.motiv || 'Nedefinit'
 
     // Salvare Notion
     await notion.pages.create({
@@ -98,7 +104,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Trimitere WhatsApp confirmare
+    // Trimitere WhatsApp
     await sendWhatsApp(telefon, nume, motiv)
 
     return NextResponse.json({ ok: true })
