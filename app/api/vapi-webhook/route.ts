@@ -21,13 +21,13 @@ async function sendWhatsApp(telefon: string, nume: string, motiv: string) {
   const from = process.env.TWILIO_WHATSAPP_FROM
 
   const mesaj =
-    `Buna ziua, ${nume}! 👋\n\n` +
-    `Va multumim ca ati apelat la *Frizeru*.\n\n` +
-    `✅ Programarea dumneavoastra a fost inregistrata:\n` +
+    `Salut, ${nume}! 👋\n\n` +
+    `Îți mulțumim că ai apelat la serviciile noastre.\n\n` +
+    `✅ Programarea ta a fost înregistrată:\n` +
     `${motiv}\n\n` +
-    `Va asteptam cu drag! 💇\n` +
+    `Te așteptăm cu drag! 💇\n` +
     `— Echipa Frizeru\n` +
-    `📞 +40316060150`
+    `📞 +40312221753`
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
 
@@ -53,7 +53,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log('Body received:', JSON.stringify(body))
 
-    // Detectăm sursa: ElevenLabs sau Vapi
     const isElevenLabs = body.name || body.nume || body.telefon || body.serviciu
 
     let nume: string
@@ -61,8 +60,6 @@ export async function POST(request: NextRequest) {
     let motiv: string
 
     if (isElevenLabs) {
-      // Date venite direct de la ElevenLabs tool
-      // Suportăm atât "name" cât și "nume" ca identifier
       nume = body.name || body.nume || 'Necunoscut'
       telefon = body.telefon || ''
       const parts = []
@@ -72,7 +69,6 @@ export async function POST(request: NextRequest) {
       if (body.ora) parts.push(`Ora: ${body.ora}`)
       motiv = parts.join(' | ') || 'Nedefinit'
     } else {
-      // Date venite de la Vapi
       if (body.message?.type !== 'end-of-call-report') {
         return NextResponse.json({ ok: true })
       }
@@ -87,7 +83,6 @@ export async function POST(request: NextRequest) {
       motiv = parts.join(' | ') || structured.motiv || 'Nedefinit'
     }
 
-    // Salvare Notion
     await notion.pages.create({
       parent: { database_id: process.env.NOTION_DATABASE_ID! },
       properties: {
@@ -109,7 +104,6 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Trimitere WhatsApp
     await sendWhatsApp(telefon, nume, motiv)
 
     return NextResponse.json({ ok: true })
