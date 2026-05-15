@@ -11,43 +11,41 @@ function getDepartament(serviciu: string): string {
   const s = serviciu.toLowerCase()
 
   const hair = [
-    'tuns', 'haircut', 'vârfuri', 'varfuri', 'trimming', 'uscat', 'breton', 'barbă', 'barba',
-    'coafat', 'coafură', 'coafura', 'blowdry', 'împletitură', 'impletitura', 'braiding',
-    'bucle', 'waves', 'coc', 'bun', 'updo', 'mireasă', 'mireasa', 'bridal',
-    'kerastase', 'keratermie', 'keratină', 'keratina', 'keratin', 'fiolă', 'fiola', 'ampoule',
-    'scalp', 'decolorat', 'bleaching', 'decapaj', 'suvițe', 'suvite', 'highlights',
-    'foilyage', 'balayage', 'airtouch', 'vopsit', 'coloring', 'nuanțare', 'nuantare',
-    'toner', 'cover', 'sprâncene vopsit', 'spălat', 'spalat', 'washing', 'ritual',
-    'îngrijire păr', 'ingrijire par',
+    'tuns', 'haircut', 'varfuri', 'trimming', 'uscat', 'breton', 'barba',
+    'coafat', 'coafura', 'blowdry', 'impletitura', 'braiding',
+    'bucle', 'waves', 'coc', 'bun', 'updo', 'mireasa', 'bridal',
+    'kerastase', 'keratermie', 'keratina', 'keratin', 'fiola', 'ampoule',
+    'scalp', 'decolorat', 'bleaching', 'decapaj', 'suvite', 'highlights',
+    'foilyage', 'balayage', 'airtouch', 'vopsit', 'coloring', 'nuantare',
+    'toner', 'cover', 'spalat', 'washing', 'ritual', 'ingrijire par',
   ]
 
   const nails = [
-    'manichiură', 'manichiura', 'manicure', 'pedichiură', 'pedichiura', 'pedicure',
-    'semipermanentă', 'semipermanenta', 'semipermanent', 'ojă', 'oja', 'gel', 'tips',
-    'unghii', 'unghie', 'întreținere unghii', 'intretinere unghii',
+    'manicura', 'manichiura', 'manicure', 'pedicura', 'pedichiura', 'pedicure',
+    'semipermanenta', 'semipermanent', 'oja', 'gel', 'tips',
+    'unghii', 'unghie',
   ]
 
   const beauty = [
-    'tratament facial', 'tratament față', 'tratament fata', 'curățare', 'curatare',
+    'tratament facial', 'tratament fata', 'curatare',
     'ultrasunete', 'rf', 'led', 'hidradermoabraziune', 'microdermoabraziune',
     'anti-rid', 'depigmentare', 'oxigenare', 'microneedeling', 'plasma',
-    'epilat', 'epilare', 'epilație', 'epilatie', 'ipl', 'bikini', 'brațe', 'brate',
-    'axilă', 'axila', 'mustață', 'mustata', 'toplip', 'picioare',
+    'epilat', 'epilare', 'epilatie', 'ipl', 'bikini', 'brate',
+    'axila', 'mustata', 'toplip', 'picioare',
     'anticelulitic', 'drenaj limfatic', 'tonifiere', 'bust',
     'extensii gene', 'gene', 'machiaj', 'makeup', 'fotoregenerare',
-    'sprâncene', 'sprancene', 'pensat', 'reconstrucție sprâncene',
+    'sprancene', 'pensat',
   ]
 
   if (hair.some(k => s.includes(k))) return 'Hair'
   if (nails.some(k => s.includes(k))) return 'Nails'
   if (beauty.some(k => s.includes(k))) return 'Beauty'
-  return 'Hair' // fallback
+  return 'Hair'
 }
 
 // ─── Lista echipă cu departament ──────────────────────────────────────────
 
 const ECHIPA: { nume: string; departament: string }[] = [
-  // Hair
   { nume: 'Alina Rustei', departament: 'Hair' },
   { nume: 'Ioana Simion', departament: 'Hair' },
   { nume: 'Claudiu Rusu', departament: 'Hair' },
@@ -65,12 +63,10 @@ const ECHIPA: { nume: string; departament: string }[] = [
   { nume: 'Catalin Munteanu', departament: 'Hair' },
   { nume: 'Ilia Ivanov', departament: 'Hair' },
   { nume: 'George Garlasteanu', departament: 'Hair' },
-  // Nails
   { nume: 'Gabriela Tudor', departament: 'Nails' },
   { nume: 'Magda Oceanu', departament: 'Nails' },
   { nume: 'Adina Nistor', departament: 'Nails' },
   { nume: 'Mariana Luca', departament: 'Nails' },
-  // Beauty
   { nume: 'Cristiana Mitrache', departament: 'Beauty' },
   { nume: 'Alina Preda', departament: 'Beauty' },
 ]
@@ -85,7 +81,6 @@ function parseDataRomana(data: string): string | null {
     'octombrie': '10', 'noiembrie': '11', 'decembrie': '12'
   }
 
-  // Folosim timezone Romania (+3) pentru a evita probleme cu UTC
   const aziRo = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Bucharest' }))
   const an = aziRo.getFullYear()
 
@@ -98,23 +93,22 @@ function parseDataRomana(data: string): string | null {
 
   const s = data.toLowerCase().trim()
 
-  if (s === 'azi' || s === 'astazi' || s === 'astăzi' || s === 'today') {
+  if (s === 'azi' || s === 'astazi' || s === 'astazi' || s === 'today') {
     return formatData(aziRo)
   }
 
-  if (s === 'maine' || s === 'mâine' || s === 'tomorrow') {
+  if (s === 'maine' || s === 'tomorrow') {
     const maine = new Date(aziRo)
     maine.setDate(aziRo.getDate() + 1)
     return formatData(maine)
   }
 
-  if (s === 'poimaine' || s === 'poimâine') {
+  if (s === 'poimaine') {
     const poi = new Date(aziRo)
     poi.setDate(aziRo.getDate() + 2)
     return formatData(poi)
   }
 
-  // Format: "16 mai" sau "16 mai 2026"
   const parts = s.split(' ')
   if (parts.length >= 2) {
     const zi = parts[0].replace(/\D/g, '').padStart(2, '0')
@@ -129,13 +123,24 @@ function parseDataRomana(data: string): string | null {
 }
 
 // ─── Formatare nume pentru agent vocal ────────────────────────────────────
-// Dacă prenumele e unic în lista de disponibili → doar prenume
-// Dacă se dublează → nume complet
 
 function formateazaNume(numeComplet: string, totiDisponibilii: string[]): string {
   const prenume = numeComplet.split(' ')[0]
   const dubluri = totiDisponibilii.filter(n => n.split(' ')[0] === prenume)
   return dubluri.length > 1 ? numeComplet : prenume
+}
+
+// ─── Ora string → minute ──────────────────────────────────────────────────
+
+function oraInMinute(oraStr: string): number {
+  const [h, m] = oraStr.split(':').map(Number)
+  return h * 60 + (m || 0)
+}
+
+function minuteInOra(min: number): string {
+  const h = Math.floor(min / 60).toString().padStart(2, '0')
+  const m = (min % 60).toString().padStart(2, '0')
+  return `${h}:${m}`
 }
 
 // ─── ElevenLabs WhatsApp ───────────────────────────────────────────────────
@@ -184,7 +189,7 @@ async function sendElevenLabsWhatsApp(
   return result
 }
 
-// ─── Găsește programare în Notion după număr de telefon ────────────────────
+// ─── Gaseste programare dupa telefon ──────────────────────────────────────
 
 async function gasesteProgramareByTelefon(telefon: string) {
   const response = await fetch(
@@ -216,69 +221,42 @@ async function gasesteProgramareByTelefon(telefon: string) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const data = searchParams.get('data') // ex: "16 mai"
-    const ora = searchParams.get('ora')   // ex: "12:00"
-    const serviciu = searchParams.get('serviciu') // ex: "tuns"
+    const data = searchParams.get('data')
+    const ora = searchParams.get('ora')
+    const serviciu = searchParams.get('serviciu')
+    const specialistCerut = searchParams.get('specialist') || ''
 
     if (!data || !ora || !serviciu) {
-      return NextResponse.json({ error: 'Parametri lipsă: data, ora, serviciu' }, { status: 400 })
+      return NextResponse.json({ error: 'Parametri lipsa: data, ora, serviciu' }, { status: 400 })
     }
 
     const departament = getDepartament(serviciu)
+    const DURATA = 45
 
-    // ─── Sloturi fixe 10:00 - 19:00 din 45 în 45 minute ──────────────────
+    // Sloturi fixe 10:00 - 19:00 din 45 in 45 minute
     const SLOTURI_FIXE: number[] = []
     for (let min = 10 * 60; min + 45 <= 19 * 60; min += 45) {
       SLOTURI_FIXE.push(min)
     }
 
-    function oraInMinuteGlobal(oraStr: string): number {
-      const [h, m] = oraStr.split(':').map(Number)
-      return h * 60 + (m || 0)
-    }
+    // Ora curenta Romania
+    const acumRo = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Bucharest' }))
+    const oraAcumMin = acumRo.getHours() * 60 + acumRo.getMinutes()
 
-    function minuteInOra(min: number): string {
-      const h = Math.floor(min / 60).toString().padStart(2, '0')
-      const m = (min % 60).toString().padStart(2, '0')
-      return `${h}:${m}`
-    }
-
-    // Verifică dacă e azi și filtrează sloturile din trecut
+    // Verifica daca e azi
     const aziISO = parseDataRomana('azi')
     const dataISO = parseDataRomana(data) || data
     const eAzi = dataISO === aziISO
 
-    // Ora curentă în Romania
-    const acumRo = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Bucharest' }))
-    const oraAcumMin = acumRo.getHours() * 60 + acumRo.getMinutes()
-
-    // Sloturile disponibile — exclude trecutul dacă e azi
+    // Sloturi disponibile - exclude trecutul daca e azi
     const SLOTURI_DISPONIBILE = eAzi
       ? SLOTURI_FIXE.filter(s => s > oraAcumMin)
       : SLOTURI_FIXE
 
-    // Verifică dacă ora cerută e un slot valid și nu e în trecut
-    const oraCerutaMin = oraInMinuteGlobal(ora)
+    const oraCerutaMin = oraInMinute(ora)
     const eSlotValid = SLOTURI_DISPONIBILE.includes(oraCerutaMin)
 
-    // Dacă nu e slot valid, găsim cel mai apropiat slot DISPONIBIL
-    let celMaiApropiateSlot: string | null = null
-    if (!eSlotValid) {
-      if (SLOTURI_DISPONIBILE.length === 0) {
-        celMaiApropiateSlot = null // Nu mai sunt sloturi azi
-      } else {
-        let minDif = Infinity
-        for (const slot of SLOTURI_DISPONIBILE) {
-          const dif = Math.abs(slot - oraCerutaMin)
-          if (dif < minDif) {
-            minDif = dif
-            celMaiApropiateSlot = minuteInOra(slot)
-          }
-        }
-      }
-    }
-
-    // Interoghează Notion pentru programările existente la data și ora cerute
+    // Interogheaza Notion pentru toate programarile din ziua respectiva
     const response = await fetch(
       `https://api.notion.com/v1/databases/${process.env.NOTION_DATABASE_ID}/query`,
       {
@@ -291,7 +269,7 @@ export async function GET(request: NextRequest) {
         body: JSON.stringify({
           filter: {
             property: 'Data programare',
-            date: { equals: parseDataRomana(data) || data },
+            date: { equals: dataISO },
           },
         }),
       }
@@ -301,89 +279,92 @@ export async function GET(request: NextRequest) {
     const programariExistente = notionData.results || []
 
     console.log('=== VERIFICARE DISPONIBILITATE ===')
-    console.log('Data ceruta:', data, '-> ISO:', parseDataRomana(data))
-    console.log('Ora ceruta:', ora)
-    console.log('Serviciu:', serviciu, '-> Departament:', departament)
+    console.log('Data ceruta:', data, '-> ISO:', dataISO)
+    console.log('Ora ceruta:', ora, '-> minute:', oraCerutaMin)
+    console.log('Slot valid:', eSlotValid)
     console.log('Programari gasite in Notion:', programariExistente.length)
     programariExistente.forEach((p: any) => {
-      console.log('  -', 
+      console.log('  -',
         p.properties?.['Specialist']?.select?.name,
         'ora:', p.properties?.['Ora programare']?.rich_text?.[0]?.text?.content,
         'data:', p.properties?.['Data programare']?.date?.start
       )
     })
 
-    const oraCeruta = oraInMinuteGlobal(ora)
-    const DURATA = 45 // minute
-    function oraInMinute(oraStr: string): number {
-      return oraInMinuteGlobal(oraStr)
+    // Functie care verifica daca un specialist e ocupat la un slot dat
+    function eOcupatLaSlot(numeSpecialist: string, slotMin: number): boolean {
+      return programariExistente.some((p: any) => {
+        const spec = p.properties?.['Specialist']?.select?.name || ''
+        const oraProg = p.properties?.['Ora programare']?.rich_text?.[0]?.text?.content || ''
+        if (spec !== numeSpecialist || !oraProg) return false
+        const oraProgMin = oraInMinute(oraProg)
+        return Math.abs(slotMin - oraProgMin) < DURATA
+      })
     }
 
-    // Specialiștii ocupați — verificăm overlap cu interval ±45 minute
-    const ocupati: string[] = programariExistente
+    // Specialistii ocupati la ora ceruta
+    const ocupatiLaOraCeruta: string[] = programariExistente
       .map((p: any) => {
         const specialist = p.properties?.['Specialist']?.select?.name || ''
         const oraProg = p.properties?.['Ora programare']?.rich_text?.[0]?.text?.content || ''
         if (!specialist || !oraProg) return null
         const oraProgMin = oraInMinute(oraProg)
-        // Overlap dacă |oraCeruta - oraProg| < DURATA
-        if (Math.abs(oraCeruta - oraProgMin) < DURATA) return specialist
+        if (Math.abs(oraCerutaMin - oraProgMin) < DURATA) return specialist
         return null
       })
       .filter(Boolean)
 
-    // Filtrează echipa după departament și exclude ocupații
+    // Specialisti disponibili la ora ceruta
     const disponibili = ECHIPA
       .filter(m => m.departament === departament)
-      .filter(m => !ocupati.includes(m.nume))
+      .filter(m => !ocupatiLaOraCeruta.includes(m.nume))
       .map(m => m.nume)
 
-    // Formatează numele pentru agentul vocal
     const numeFormatate = disponibili.map(n => formateazaNume(n, disponibili))
 
-    // Dacă s-a cerut un specialist specific, verificăm dacă e liber
-    // și dacă nu, găsim primul slot liber pentru el în ziua respectivă
-    const specialistCerut = searchParams.get('specialist') || ''
+    // Gasim cel mai apropiat slot disponibil (slot valid SI neocupat pentru TOTI)
+    let celMaiApropiateSlot: string | null = null
+    if (!eSlotValid && SLOTURI_DISPONIBILE.length > 0) {
+      // Sortam sloturile dupa distanta fata de ora ceruta
+      const sloturiSortate = [...SLOTURI_DISPONIBILE].sort((a, b) =>
+        Math.abs(a - oraCerutaMin) - Math.abs(b - oraCerutaMin)
+      )
+
+      for (const slot of sloturiSortate) {
+        // Verificam daca exista cel putin un specialist liber la acest slot
+        const specialistiLiberiLaSlot = ECHIPA
+          .filter(m => m.departament === departament)
+          .filter(m => !eOcupatLaSlot(m.nume, slot))
+
+        if (specialistiLiberiLaSlot.length > 0) {
+          celMaiApropiateSlot = minuteInOra(slot)
+          break
+        }
+      }
+    }
+
+    // Logica pentru specialist specific cerut
     let specialistCerutLiber = true
     let urmatorSlotLiber: string | null = null
 
     if (specialistCerut) {
-      // Verificăm dacă specialistul cerut e în lista ocupați
       const specialistCompletCerut = ECHIPA.find(m =>
         m.nume.toLowerCase().includes(specialistCerut.toLowerCase()) ||
         specialistCerut.toLowerCase().includes(m.nume.split(' ')[0].toLowerCase())
       )
 
       if (specialistCompletCerut) {
-        specialistCerutLiber = !ocupati.includes(specialistCompletCerut.nume)
+        specialistCerutLiber = !eOcupatLaSlot(specialistCompletCerut.nume, oraCerutaMin)
 
         if (!specialistCerutLiber) {
-          // Găsim toate programările specialistului în ziua respectivă
-          const programariSpecialist = programariExistente
-            .filter((p: any) => {
-              const spec = p.properties?.['Specialist']?.select?.name || ''
-              return spec === specialistCompletCerut.nume
-            })
-            .map((p: any) => {
-              const oraProg = p.properties?.['Ora programare']?.rich_text?.[0]?.text?.content || ''
-              return oraInMinute(oraProg)
-            })
-            .filter((m: number) => m > 0)
-
-          // Folosim doar sloturi disponibile (exclude trecutul dacă e azi)
-          const sloturi = SLOTURI_DISPONIBILE
-
-          // Găsim cel mai apropiat slot liber — mai întâi după ora cerută, apoi înainte
-          const sloturiDupa = sloturi.filter(s => s > oraCeruta)
-          const sloturiInainte = sloturi.filter(s => s < oraCeruta && s > oraAcumMin).reverse()
+          // Cautam urmatorul slot liber pentru specialist
+          const sloturiDupa = SLOTURI_DISPONIBILE.filter(s => s > oraCerutaMin)
+          const sloturiInainte = SLOTURI_DISPONIBILE.filter(s => s < oraCerutaMin).reverse()
           const ordineCautare = [...sloturiDupa, ...sloturiInainte]
 
           for (const slot of ordineCautare) {
-            const eOcupat = programariSpecialist.some((p: number) => Math.abs(slot - p) < DURATA)
-            if (!eOcupat) {
-              const h = Math.floor(slot / 60).toString().padStart(2, '0')
-              const m = (slot % 60).toString().padStart(2, '0')
-              urmatorSlotLiber = `${h}:${m}`
+            if (!eOcupatLaSlot(specialistCompletCerut.nume, slot)) {
+              urmatorSlotLiber = minuteInOra(slot)
               break
             }
           }
@@ -391,9 +372,27 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Daca slot_valid e false, recalculam disponibili pentru cel_mai_apropiat_slot
+    let disponibiliLaCelMaiApropiateSlot: string[] = []
+    if (!eSlotValid && celMaiApropiateSlot) {
+      const slotMin = oraInMinute(celMaiApropiateSlot)
+      disponibiliLaCelMaiApropiateSlot = ECHIPA
+        .filter(m => m.departament === departament)
+        .filter(m => !eOcupatLaSlot(m.nume, slotMin))
+        .map(m => m.nume)
+    }
+
+    console.log('Ocupati la ora ceruta:', ocupatiLaOraCeruta)
+    console.log('Disponibili:', disponibili)
+    console.log('Cel mai apropiat slot:', celMaiApropiateSlot)
+    console.log('Disponibili la cel mai apropiat slot:', disponibiliLaCelMaiApropiateSlot)
+
     return NextResponse.json({
       disponibili: numeFormatate,
       disponibili_complet: disponibili,
+      disponibili_la_slot_propus: disponibiliLaCelMaiApropiateSlot.map(n =>
+        formateazaNume(n, disponibiliLaCelMaiApropiateSlot)
+      ),
       departament,
       data,
       ora,
@@ -412,7 +411,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ─── POST principal (salvare programare nouă) ──────────────────────────────
+// ─── POST principal (salvare programare noua) ──────────────────────────────
 
 export async function POST(request: NextRequest) {
   try {
@@ -464,7 +463,6 @@ export async function POST(request: NextRequest) {
 
     const departament = serviciu ? getDepartament(serviciu) : ''
 
-    // Găsește numele complet al specialistului din echipă (pentru câmpul Select din Notion)
     let specialistComplet = specialist
     if (specialist) {
       const gasit = ECHIPA.find(m =>
@@ -474,7 +472,6 @@ export async function POST(request: NextRequest) {
       if (gasit) specialistComplet = gasit.nume
     }
 
-    // Proprietăți Notion
     const notionProperties: any = {
       'Nume client': {
         title: [{ text: { content: nume } }],
@@ -544,7 +541,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ─── PATCH - modificare programare existentă ───────────────────────────────
+// ─── PATCH - modificare programare existenta ───────────────────────────────
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -554,13 +551,13 @@ export async function PATCH(request: NextRequest) {
     const { telefon, serviciu, data, ora, nume, specialist } = body
 
     if (!telefon) {
-      return NextResponse.json({ error: 'Telefon lipsă' }, { status: 400 })
+      return NextResponse.json({ error: 'Telefon lipsa' }, { status: 400 })
     }
 
     const programareExistenta = await gasesteProgramareByTelefon(telefon)
 
     if (!programareExistenta) {
-      return NextResponse.json({ error: 'Programare negăsită' }, { status: 404 })
+      return NextResponse.json({ error: 'Programare negasita' }, { status: 404 })
     }
 
     const parts = []
@@ -625,7 +622,7 @@ export async function PATCH(request: NextRequest) {
     const numeClient = nume || 'Client'
     await sendElevenLabsWhatsApp(telefon, numeClient, serviciu, data, ora)
 
-    return NextResponse.json({ ok: true, message: 'Programare modificată' })
+    return NextResponse.json({ ok: true, message: 'Programare modificata' })
   } catch (error) {
     console.error('Modificare error:', error)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
