@@ -23,15 +23,6 @@ async function sendElevenLabsWhatsApp(
   const WHATSAPP_PHONE_NUMBER_ID = process.env.ELEVENLABS_WHATSAPP_PHONE_NUMBER_ID!
   const AGENT_ID = process.env.ELEVENLABS_AGENT_ID!
 
-  const mesajText =
-    `Buna ziua, ${nume}! 👋\n\n` +
-    `Va multumim ca ati apelat la Frizeru.\n\n` +
-    `✅ Programarea dumneavoastra a fost inregistrata:\n` +
-    `Serviciu: ${serviciu} | Data: ${data} | Ora: ${ora}\n\n` +
-    `Va asteptam cu drag! 💇\n` +
-    `— Echipa Frizeru\n` +
-    `📞 +40316060150`
-
   const response = await fetch(
     'https://api.elevenlabs.io/v1/convai/whatsapp/outbound-message',
     {
@@ -44,15 +35,14 @@ async function sendElevenLabsWhatsApp(
         whatsapp_phone_number_id: WHATSAPP_PHONE_NUMBER_ID,
         whatsapp_user_id: whatsappUserId,
         agent_id: AGENT_ID,
-        // Mesaj liber (fără template) - funcționează dacă clientul a mai scris recent
-        // Când template-ul Meta e aprobat, înlocuiește cu template_name etc.
-        conversation_initiation_client_data: {
-          conversation_config_override: {
-            agent: {
-              first_message: mesajText,
-            },
-          },
-        },
+        template_name: 'confirmare_programare_frizeru',
+        template_language_code: 'ro',
+        template_params: [
+          { type: 'text', text: nume },
+          { type: 'text', text: serviciu },
+          { type: 'text', text: data },
+          { type: 'text', text: ora },
+        ],
       }),
     }
   )
