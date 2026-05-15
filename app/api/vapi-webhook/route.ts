@@ -306,9 +306,12 @@ export async function GET(request: NextRequest) {
             sloturi.push(min)
           }
 
-          // Găsim primul slot liber după ora cerută
-          for (const slot of sloturi) {
-            if (slot <= oraCeruta) continue // sărim sloturile din trecut
+          // Găsim cel mai apropiat slot liber — mai întâi după ora cerută, apoi înainte
+          const sloturiDupa = sloturi.filter(s => s > oraCeruta)
+          const sloturiInainte = sloturi.filter(s => s < oraCeruta).reverse()
+          const ordineCautare = [...sloturiDupa, ...sloturiInainte]
+
+          for (const slot of ordineCautare) {
             const eOcupat = programariSpecialist.some((p: number) => Math.abs(slot - p) < DURATA)
             if (!eOcupat) {
               const h = Math.floor(slot / 60).toString().padStart(2, '0')
