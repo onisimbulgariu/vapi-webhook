@@ -85,25 +85,33 @@ function parseDataRomana(data: string): string | null {
     'octombrie': '10', 'noiembrie': '11', 'decembrie': '12'
   }
 
-  const azi = new Date()
-  const an = azi.getFullYear()
+  // Folosim timezone Romania (+3) pentru a evita probleme cu UTC
+  const aziRo = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Bucharest' }))
+  const an = aziRo.getFullYear()
+
+  function formatData(d: Date): string {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const zi = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${zi}`
+  }
 
   const s = data.toLowerCase().trim()
 
-  if (s === 'azi' || s === 'astazi' || s === 'astăzi') {
-    return azi.toISOString().split('T')[0]
+  if (s === 'azi' || s === 'astazi' || s === 'astăzi' || s === 'today') {
+    return formatData(aziRo)
   }
 
-  if (s === 'maine' || s === 'mâine') {
-    const maine = new Date(azi)
-    maine.setDate(azi.getDate() + 1)
-    return maine.toISOString().split('T')[0]
+  if (s === 'maine' || s === 'mâine' || s === 'tomorrow') {
+    const maine = new Date(aziRo)
+    maine.setDate(aziRo.getDate() + 1)
+    return formatData(maine)
   }
 
   if (s === 'poimaine' || s === 'poimâine') {
-    const poi = new Date(azi)
-    poi.setDate(azi.getDate() + 2)
-    return poi.toISOString().split('T')[0]
+    const poi = new Date(aziRo)
+    poi.setDate(aziRo.getDate() + 2)
+    return formatData(poi)
   }
 
   // Format: "16 mai" sau "16 mai 2026"
@@ -273,6 +281,19 @@ export async function GET(request: NextRequest) {
 
     const notionData = await response.json()
     const programariExistente = notionData.results || []
+
+    console.log('=== VERIFICARE DISPONIBILITATE ===')
+    console.log('Data ceruta:', data, '-> ISO:', parseDataRomana(data))
+    console.log('Ora ceruta:', ora)
+    console.log('Serviciu:', serviciu, '-> Departament:', departament)
+    console.log('Programari gasite in Notion:', programariExistente.length)
+    programariExistente.forEach((p: any) => {
+      console.log('  -', 
+        p.properties?.['Specialist']?.select?.name,
+        'ora:', p.properties?.['Ora programare']?.rich_text?.[0]?.text?.content,
+        'data:', p.properties?.['Data programare']?.date?.start
+      )
+    })
 
     const oraCeruta = oraInMinuteGlobal(ora)
     const DURATA = 45 // minute
