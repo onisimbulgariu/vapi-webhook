@@ -93,7 +93,7 @@ function parseDataRomana(data: string): string | null {
 
   const s = data.toLowerCase().trim()
 
-  if (s === 'azi' || s === 'astazi' || s === 'astazi' || s === 'today') {
+  if (s === 'azi' || s === 'astazi' || s === 'today') {
     return formatData(aziRo)
   }
 
@@ -107,6 +107,21 @@ function parseDataRomana(data: string): string | null {
     const poi = new Date(aziRo)
     poi.setDate(aziRo.getDate() + 2)
     return formatData(poi)
+  }
+
+  // Zilele saptamanii
+  const zileMap: Record<string, number> = {
+    'luni': 1, 'marti': 2, 'marti': 2, 'miercuri': 3,
+    'joi': 4, 'vineri': 5, 'sambata': 6, 'duminica': 0,
+  }
+  const ziuaSaptamanii = zileMap[s]
+  if (ziuaSaptamanii !== undefined) {
+    const azi = aziRo.getDay() // 0=duminica, 1=luni...
+    let diff = ziuaSaptamanii - azi
+    if (diff <= 0) diff += 7 // urmatoarea aparitie
+    const ziuaViitoare = new Date(aziRo)
+    ziuaViitoare.setDate(aziRo.getDate() + diff)
+    return formatData(ziuaViitoare)
   }
 
   const parts = s.split(' ')
