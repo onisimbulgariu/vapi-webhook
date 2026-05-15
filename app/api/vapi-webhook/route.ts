@@ -5,48 +5,82 @@ const notion = new Client({
   auth: process.env.NOTION_TOKEN,
 })
 
-async function sendWhatsApp(telefon: string, nume: string, motiv: string) {
+// ─── ElevenLabs WhatsApp ───────────────────────────────────────────────────
+
+async function sendElevenLabsWhatsApp(
+  telefon: string,
+  nume: string,
+  serviciu: string,
+  data: string,
+  ora: string
+) {
   if (!telefon || telefon === '') return
 
-  let numarFormatat = telefon.replace(/\s/g, '')
-  if (numarFormatat.startsWith('0')) {
-    numarFormatat = '+4' + numarFormatat
-  }
-  if (!numarFormatat.startsWith('+')) {
-    numarFormatat = '+' + numarFormatat
-  }
+  // Formatează numărul: scoate +, păstrează doar cifrele (ex: 40722123456)
+  let whatsappUserId = telefon.replace(/\s/g, '').replace(/^\+/, '')
 
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
-  const from = process.env.TWILIO_WHATSAPP_FROM
+  const XI_API_KEY = process.env.ELEVENLABS_API_KEY!
+  const WHATSAPP_PHONE_NUMBER_ID = process.env.ELEVENLABS_WHATSAPP_PHONE_NUMBER_ID!
+  const AGENT_ID = process.env.ELEVENLABS_AGENT_ID!
 
-  const mesaj =
-    `Salut, ${nume}! 👋\n\n` +
-    `Îți mulțumim că ai apelat la serviciile noastre.\n\n` +
-    `✅ Programarea ta a fost înregistrată:\n` +
-    `${motiv}\n\n` +
-    `Te așteptăm cu drag! 💇\n` +
+  const mesajText =
+    `Buna ziua, ${nume}! 👋\n\n` +
+    `Va multumim ca ati apelat la Frizeru.\n\n` +
+    `✅ Programarea dumneavoastra a fost inregistrata:\n` +
+    `Serviciu: ${serviciu} | Data: ${data} | Ora: ${ora}\n\n` +
+    `Va asteptam cu drag! 💇\n` +
     `— Echipa Frizeru\n` +
-    `📞 +40312221753`
+    `📞 +40316060150`
 
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      From: from!,
-      To: `whatsapp:${numarFormatat}`,
-      Body: mesaj,
-    }).toString(),
-  })
+  const response = await fetch(
+    'https://api.elevenlabs.io/v1/convai/whatsapp/outbound-message',
+    {
+      method: 'POST',
+      headers: {
+        'xi-api-key': XI_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        whatsapp_phone_number_id: WHATSAPP_PHONE_NUMBER_ID,
+        whatsapp_user_id: whatsappUserId,
+        agent_id: AGENT_ID,
+        // Mesaj liber (fără template) - funcționează dacă clientul a mai scris recent
+        // Când template-ul Meta e aprobat, înlocuiește cu template_name etc.
+        conversation_initiation_client_data: {
+          conversation_config_override: {
+            agent: {
+              first_message: mesajText,
+            },
+          },
+        },
+      }),
+    }
+  )
 
   const result = await response.json()
-  console.log('Twilio response:', JSON.stringify(result))
+  console.log('ElevenLabs WhatsApp response:', JSON.stringify(result))
+  return result
 }
+
+// ─── Găsește programare în Notion după număr de telefon ────────────────────
+
+async function gasesteProgramareByTelefon(telefon: string) {
+  const response = await notion.databases.query({
+    database_id: process.env.NOTION_DATABASE_ID!,
+    filter: {
+      property: 'Telefon',
+      phone_number: {
+        equals: telefon,
+      },
+    },
+    sorts: [{ property: 'Data apel', direction: 'descending' }],
+    page_size: 1,
+  })
+
+  return response.results[0] || null
+}
+
+// ─── POST principal (salvare programare nouă) ──────────────────────────────
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,15 +92,22 @@ export async function POST(request: NextRequest) {
     let nume: string
     let telefon: string
     let motiv: string
+    let serviciu = ''
+    let data = ''
+    let ora = ''
 
     if (isElevenLabs) {
       nume = body.name || body.nume || 'Necunoscut'
       telefon = body.telefon || ''
+      serviciu = body.serviciu || ''
+      data = body.data || ''
+      ora = body.ora || ''
+
       const parts = []
-      if (body.serviciu) parts.push(`Serviciu: ${body.serviciu}`)
+      if (serviciu) parts.push(`Serviciu: ${serviciu}`)
       if (body.specialist) parts.push(`Specialist: ${body.specialist}`)
-      if (body.data) parts.push(`Data: ${body.data}`)
-      if (body.ora) parts.push(`Ora: ${body.ora}`)
+      if (data) parts.push(`Data: ${data}`)
+      if (ora) parts.push(`Ora: ${ora}`)
       motiv = parts.join(' | ') || 'Nedefinit'
     } else {
       if (body.message?.type !== 'end-of-call-report') {
@@ -83,33 +124,85 @@ export async function POST(request: NextRequest) {
       motiv = parts.join(' | ') || structured.motiv || 'Nedefinit'
     }
 
+    // Salvează în Notion
     await notion.pages.create({
       parent: { database_id: process.env.NOTION_DATABASE_ID! },
       properties: {
         'Nume client': {
-          title: [{ text: { content: nume } }]
+          title: [{ text: { content: nume } }],
         },
         'Telefon': {
-          phone_number: telefon
+          phone_number: telefon,
         },
         'Motiv apel': {
-          rich_text: [{ text: { content: motiv } }]
+          rich_text: [{ text: { content: motiv } }],
         },
         'Data apel': {
-          date: { start: new Date().toISOString() }
+          date: { start: new Date().toISOString() },
         },
         'Status': {
-          select: { name: 'Nou' }
-        }
-      }
+          select: { name: 'Nou' },
+        },
+      },
     })
 
-    await sendWhatsApp(telefon, nume, motiv)
+    // Trimite confirmare WhatsApp prin ElevenLabs
+    await sendElevenLabsWhatsApp(telefon, nume, serviciu, data, ora)
 
     return NextResponse.json({ ok: true })
-
   } catch (error) {
     console.error('Webhook error:', error)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
+// ─── PATCH - modificare programare existentă ───────────────────────────────
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    console.log('Modificare programare:', JSON.stringify(body))
+
+    const { telefon, serviciu, data, ora, nume } = body
+
+    if (!telefon) {
+      return NextResponse.json({ error: 'Telefon lipsă' }, { status: 400 })
+    }
+
+    // Găsește programarea existentă
+    const programareExistenta = await gasesteProgramareByTelefon(telefon)
+
+    if (!programareExistenta) {
+      return NextResponse.json({ error: 'Programare negăsită' }, { status: 404 })
+    }
+
+    // Construiește motiv actualizat
+    const parts = []
+    if (serviciu) parts.push(`Serviciu: ${serviciu}`)
+    if (data) parts.push(`Data: ${data}`)
+    if (ora) parts.push(`Ora: ${ora}`)
+    const motivNou = parts.join(' | ') || 'Nedefinit'
+
+    // Actualizează în Notion
+    await notion.pages.update({
+      page_id: programareExistenta.id,
+      properties: {
+        'Motiv apel': {
+          rich_text: [{ text: { content: motivNou } }],
+        },
+        'Status': {
+          select: { name: 'Modificat' },
+        },
+      },
+    })
+
+    // Trimite noua confirmare WhatsApp
+    const numeClient = nume || 'Client'
+    await sendElevenLabsWhatsApp(telefon, numeClient, serviciu, data, ora)
+
+    return NextResponse.json({ ok: true, message: 'Programare modificată' })
+  } catch (error) {
+    console.error('Modificare error:', error)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
