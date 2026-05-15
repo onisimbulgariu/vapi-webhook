@@ -573,11 +573,8 @@ export async function POST(request: NextRequest) {
         notionProperties['Data programare'] = {
           date: { start: dataISO },
         }
-      } else {
-        notionProperties['Data programare'] = {
-          rich_text: [{ text: { content: data } }],
-        }
       }
+      // daca nu putem parsa data, nu adaugam campul - evitam eroarea Notion
     }
 
     if (ora) {
@@ -661,11 +658,8 @@ export async function PATCH(request: NextRequest) {
         updateProperties['Data programare'] = {
           date: { start: dataISOPatch },
         }
-      } else {
-        updateProperties['Data programare'] = {
-          rich_text: [{ text: { content: data } }],
-        }
       }
+      // daca nu putem parsa data, nu adaugam campul - evitam eroarea Notion
     }
 
     if (ora) {
