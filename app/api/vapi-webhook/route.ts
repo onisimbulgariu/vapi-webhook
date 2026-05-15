@@ -109,16 +109,15 @@ function parseDataRomana(data: string): string | null {
     return formatData(poi)
   }
 
-  // Zilele saptamanii
   const zileMap: Record<string, number> = {
     'luni': 1, 'marti': 2, 'miercuri': 3,
     'joi': 4, 'vineri': 5, 'sambata': 6, 'duminica': 0,
   }
   const ziuaSaptamanii = zileMap[s]
   if (ziuaSaptamanii !== undefined) {
-    const azi = aziRo.getDay() // 0=duminica, 1=luni...
+    const azi = aziRo.getDay()
     let diff = ziuaSaptamanii - azi
-    if (diff <= 0) diff += 7 // urmatoarea aparitie
+    if (diff <= 0) diff += 7
     const ziuaViitoare = new Date(aziRo)
     ziuaViitoare.setDate(aziRo.getDate() + diff)
     return formatData(ziuaViitoare)
@@ -158,9 +157,9 @@ function minuteInOra(min: number): string {
   return `${h}:${m}`
 }
 
-// ─── ElevenLabs WhatsApp ───────────────────────────────────────────────────
+// ─── Twilio WhatsApp fallback ──────────────────────────────────────────────
 
-async function sendElevenLabsWhatsApp(
+async function sendTwilioWhatsApp(
   telefon: string,
   nume: string,
   serviciu: string,
@@ -169,39 +168,98 @@ async function sendElevenLabsWhatsApp(
 ) {
   if (!telefon || telefon === '') return
 
-  let whatsappUserId = telefon.replace(/\s/g, '').replace(/^\+/, '')
+  const accountSid = process.env.TWILIO_ACCOUNT_SID!
+  const authToken = process.env.TWILIO_AUTH_TOKEN!
+  const from = process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886'
 
-  const XI_API_KEY = process.env.ELEVENLABS_API_KEY!
-  const WHATSAPP_PHONE_NUMBER_ID = process.env.ELEVENLABS_WHATSAPP_PHONE_NUMBER_ID!
-  const AGENT_ID = process.env.ELEVENLABS_AGENT_ID!
+  const telefonCurat = telefon.replace(/\s/g, '')
+  const to = `whatsapp:${telefonCurat.startsWith('+') ? telefonCurat : '+' + telefonCurat}`
+
+  const body =
+    `Buna ziua, ${nume}! 👋\n\n` +
+    `Programarea ta la *Fri-ze-ru* a fost confirmata:\n\n` +
+    `📋 *Serviciu:* ${serviciu}\n` +
+    `📅 *Data:* ${data}\n` +
+    `🕐 *Ora:* ${ora}\n\n` +
+    `Te asteptam! Pentru modificari sau anulare, raspunde la acest mesaj.`
+
+  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
 
   const response = await fetch(
-    'https://api.elevenlabs.io/v1/convai/whatsapp/outbound-message',
+    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
     {
       method: 'POST',
       headers: {
-        'xi-api-key': XI_API_KEY,
-        'Content-Type': 'application/json',
+        'Authorization': `Basic ${credentials}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify({
-        whatsapp_phone_number_id: WHATSAPP_PHONE_NUMBER_ID,
-        whatsapp_user_id: whatsappUserId,
-        agent_id: AGENT_ID,
-        template_name: 'confirmare_programare_frizeru',
-        template_language_code: 'ro',
-        template_params: [
-          { type: 'text', text: nume },
-          { type: 'text', text: serviciu },
-          { type: 'text', text: data },
-          { type: 'text', text: ora },
-        ],
-      }),
+      body: new URLSearchParams({ From: from, To: to, Body: body }).toString(),
     }
   )
 
   const result = await response.json()
-  console.log('ElevenLabs WhatsApp response:', JSON.stringify(result))
+  console.log('Twilio WhatsApp response:', JSON.stringify(result))
   return result
+}
+
+// ─── ElevenLabs WhatsApp (cu Twilio fallback) ─────────────────────────────
+
+async function sendWhatsAppConfirmare(
+  telefon: string,
+  nume: string,
+  serviciu: string,
+  data: string,
+  ora: string
+) {
+  if (!telefon || telefon === '') return
+
+  const XI_API_KEY = process.env.ELEVENLABS_API_KEY
+  const WHATSAPP_PHONE_NUMBER_ID = process.env.ELEVENLABS_WHATSAPP_PHONE_NUMBER_ID
+  const AGENT_ID = process.env.ELEVENLABS_AGENT_ID
+
+  if (XI_API_KEY && WHATSAPP_PHONE_NUMBER_ID && AGENT_ID) {
+    try {
+      const whatsappUserId = telefon.replace(/\s/g, '').replace(/^\+/, '')
+      const response = await fetch(
+        'https://api.elevenlabs.io/v1/convai/whatsapp/outbound-message',
+        {
+          method: 'POST',
+          headers: {
+            'xi-api-key': XI_API_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            whatsapp_phone_number_id: WHATSAPP_PHONE_NUMBER_ID,
+            whatsapp_user_id: whatsappUserId,
+            agent_id: AGENT_ID,
+            template_name: 'confirmare_programare_frizeru',
+            template_language_code: 'ro',
+            template_params: [
+              { type: 'text', text: nume },
+              { type: 'text', text: serviciu },
+              { type: 'text', text: data },
+              { type: 'text', text: ora },
+            ],
+          }),
+        }
+      )
+      const result = await response.json()
+      console.log('ElevenLabs WhatsApp response:', JSON.stringify(result))
+
+      if (result.error || result.status === 'error' || !response.ok) {
+        console.log('ElevenLabs WA failed, fallback la Twilio...')
+        return await sendTwilioWhatsApp(telefon, nume, serviciu, data, ora)
+      }
+
+      return result
+    } catch (err) {
+      console.log('ElevenLabs WA exception, fallback la Twilio:', err)
+      return await sendTwilioWhatsApp(telefon, nume, serviciu, data, ora)
+    }
+  }
+
+  console.log('ElevenLabs WA neconfigurat, folosim Twilio...')
+  return await sendTwilioWhatsApp(telefon, nume, serviciu, data, ora)
 }
 
 // ─── Gaseste programare dupa telefon ──────────────────────────────────────
@@ -248,22 +306,18 @@ export async function GET(request: NextRequest) {
     const departament = getDepartament(serviciu)
     const DURATA = 45
 
-    // Sloturi fixe 10:00 - 19:00 din 45 in 45 minute
     const SLOTURI_FIXE: number[] = []
     for (let min = 10 * 60; min + 45 <= 19 * 60; min += 45) {
       SLOTURI_FIXE.push(min)
     }
 
-    // Ora curenta Romania
     const acumRo = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Bucharest' }))
     const oraAcumMin = acumRo.getHours() * 60 + acumRo.getMinutes()
 
-    // Verifica daca e azi
     const aziISO = parseDataRomana('azi')
     const dataISO = parseDataRomana(data) || data
     const eAzi = dataISO === aziISO
 
-    // Sloturi disponibile - exclude trecutul daca e azi
     const SLOTURI_DISPONIBILE = eAzi
       ? SLOTURI_FIXE.filter(s => s > oraAcumMin)
       : SLOTURI_FIXE
@@ -271,7 +325,6 @@ export async function GET(request: NextRequest) {
     const oraCerutaMin = oraInMinute(ora)
     const eSlotValid = SLOTURI_DISPONIBILE.includes(oraCerutaMin)
 
-    // Interogheaza Notion pentru toate programarile din ziua respectiva
     const response = await fetch(
       `https://api.notion.com/v1/databases/${process.env.NOTION_DATABASE_ID}/query`,
       {
@@ -306,7 +359,6 @@ export async function GET(request: NextRequest) {
       )
     })
 
-    // Functie care verifica daca un specialist e ocupat la un slot dat
     function eOcupatLaSlot(numeSpecialist: string, slotMin: number): boolean {
       return programariExistente.some((p: any) => {
         const spec = p.properties?.['Specialist']?.select?.name || ''
@@ -317,7 +369,6 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Specialistii ocupati la ora ceruta
     const ocupatiLaOraCeruta: string[] = programariExistente
       .map((p: any) => {
         const specialist = p.properties?.['Specialist']?.select?.name || ''
@@ -329,7 +380,6 @@ export async function GET(request: NextRequest) {
       })
       .filter(Boolean)
 
-    // Specialisti disponibili la ora ceruta
     const disponibili = ECHIPA
       .filter(m => m.departament === departament)
       .filter(m => !ocupatiLaOraCeruta.includes(m.nume))
@@ -337,16 +387,13 @@ export async function GET(request: NextRequest) {
 
     const numeFormatate = disponibili.map(n => formateazaNume(n, disponibili))
 
-    // Gasim cel mai apropiat slot disponibil (slot valid SI neocupat pentru TOTI)
     let celMaiApropiateSlot: string | null = null
     if (!eSlotValid && SLOTURI_DISPONIBILE.length > 0) {
-      // Sortam sloturile dupa distanta fata de ora ceruta
       const sloturiSortate = [...SLOTURI_DISPONIBILE].sort((a, b) =>
         Math.abs(a - oraCerutaMin) - Math.abs(b - oraCerutaMin)
       )
 
       for (const slot of sloturiSortate) {
-        // Verificam daca exista cel putin un specialist liber la acest slot
         const specialistiLiberiLaSlot = ECHIPA
           .filter(m => m.departament === departament)
           .filter(m => !eOcupatLaSlot(m.nume, slot))
@@ -358,7 +405,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Logica pentru specialist specific cerut
     let specialistCerutLiber = true
     let urmatorSlotLiber: string | null = null
 
@@ -372,7 +418,6 @@ export async function GET(request: NextRequest) {
         specialistCerutLiber = !eOcupatLaSlot(specialistCompletCerut.nume, oraCerutaMin)
 
         if (!specialistCerutLiber) {
-          // Cautam urmatorul slot liber pentru specialist
           const sloturiDupa = SLOTURI_DISPONIBILE.filter(s => s > oraCerutaMin)
           const sloturiInainte = SLOTURI_DISPONIBILE.filter(s => s < oraCerutaMin).reverse()
           const ordineCautare = [...sloturiDupa, ...sloturiInainte]
@@ -387,7 +432,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Daca slot_valid e false, recalculam disponibili pentru cel_mai_apropiat_slot
     let disponibiliLaCelMaiApropiateSlot: string[] = []
     if (!eSlotValid && celMaiApropiateSlot) {
       const slotMin = oraInMinute(celMaiApropiateSlot)
@@ -547,7 +591,8 @@ export async function POST(request: NextRequest) {
       properties: notionProperties,
     })
 
-    await sendElevenLabsWhatsApp(telefon, nume, serviciu, data, ora)
+    // Trimite confirmare WhatsApp (ElevenLabs cu fallback Twilio)
+    await sendWhatsAppConfirmare(telefon, nume, serviciu, data, ora)
 
     return NextResponse.json({ ok: true })
   } catch (error) {
@@ -635,7 +680,9 @@ export async function PATCH(request: NextRequest) {
     })
 
     const numeClient = nume || 'Client'
-    await sendElevenLabsWhatsApp(telefon, numeClient, serviciu, data, ora)
+
+    // Trimite confirmare WhatsApp (ElevenLabs cu fallback Twilio)
+    await sendWhatsAppConfirmare(telefon, numeClient, serviciu, data, ora)
 
     return NextResponse.json({ ok: true, message: 'Programare modificata' })
   } catch (error) {
