@@ -271,6 +271,56 @@ export async function GET(request: NextRequest) {
     // Formatează numele pentru agentul vocal
     const numeFormatate = disponibili.map(n => formateazaNume(n, disponibili))
 
+    // Dacă s-a cerut un specialist specific, verificăm dacă e liber
+    // și dacă nu, găsim primul slot liber pentru el în ziua respectivă
+    const specialistCerut = searchParams.get('specialist') || ''
+    let specialistCerutLiber = true
+    let urmatorSlotLiber: string | null = null
+
+    if (specialistCerut) {
+      // Verificăm dacă specialistul cerut e în lista ocupați
+      const specialistCompletCerut = ECHIPA.find(m =>
+        m.nume.toLowerCase().includes(specialistCerut.toLowerCase()) ||
+        specialistCerut.toLowerCase().includes(m.nume.split(' ')[0].toLowerCase())
+      )
+
+      if (specialistCompletCerut) {
+        specialistCerutLiber = !ocupati.includes(specialistCompletCerut.nume)
+
+        if (!specialistCerutLiber) {
+          // Găsim toate programările specialistului în ziua respectivă
+          const programariSpecialist = programariExistente
+            .filter((p: any) => {
+              const spec = p.properties?.['Specialist']?.select?.name || ''
+              return spec === specialistCompletCerut.nume
+            })
+            .map((p: any) => {
+              const oraProg = p.properties?.['Ora programare']?.rich_text?.[0]?.text?.content || ''
+              return oraInMinute(oraProg)
+            })
+            .filter((m: number) => m > 0)
+
+          // Sloturi posibile 10:00 - 19:00 din 45 în 45 minute
+          const sloturi = []
+          for (let min = 10 * 60; min + 45 <= 19 * 60; min += 45) {
+            sloturi.push(min)
+          }
+
+          // Găsim primul slot liber după ora cerută
+          for (const slot of sloturi) {
+            if (slot <= oraCeruta) continue // sărim sloturile din trecut
+            const eOcupat = programariSpecialist.some((p: number) => Math.abs(slot - p) < DURATA)
+            if (!eOcupat) {
+              const h = Math.floor(slot / 60).toString().padStart(2, '0')
+              const m = (slot % 60).toString().padStart(2, '0')
+              urmatorSlotLiber = `${h}:${m}`
+              break
+            }
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       disponibili: numeFormatate,
       disponibili_complet: disponibili,
@@ -278,6 +328,9 @@ export async function GET(request: NextRequest) {
       data,
       ora,
       liber: disponibili.length > 0,
+      specialist_cerut: specialistCerut,
+      specialist_cerut_liber: specialistCerutLiber,
+      urmator_slot_liber_specialist: urmatorSlotLiber,
     })
   } catch (error) {
     console.error('Verificare disponibilitate error:', error)
