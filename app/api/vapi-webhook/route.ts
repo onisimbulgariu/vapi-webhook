@@ -218,6 +218,40 @@ export async function GET(request: NextRequest) {
 
     const departament = getDepartament(serviciu)
 
+    // ─── Sloturi fixe 10:00 - 19:00 din 45 în 45 minute ──────────────────
+    const SLOTURI_FIXE: number[] = []
+    for (let min = 10 * 60; min + 45 <= 19 * 60; min += 45) {
+      SLOTURI_FIXE.push(min)
+    }
+
+    function oraInMinuteGlobal(oraStr: string): number {
+      const [h, m] = oraStr.split(':').map(Number)
+      return h * 60 + (m || 0)
+    }
+
+    function minuteInOra(min: number): string {
+      const h = Math.floor(min / 60).toString().padStart(2, '0')
+      const m = (min % 60).toString().padStart(2, '0')
+      return `${h}:${m}`
+    }
+
+    // Verifică dacă ora cerută e un slot valid
+    const oraCerutaMin = oraInMinuteGlobal(ora)
+    const eSlotValid = SLOTURI_FIXE.includes(oraCerutaMin)
+
+    // Dacă nu e slot valid, găsim cel mai apropiat slot
+    let celMaiApropiateSlot: string | null = null
+    if (!eSlotValid) {
+      let minDif = Infinity
+      for (const slot of SLOTURI_FIXE) {
+        const dif = Math.abs(slot - oraCerutaMin)
+        if (dif < minDif) {
+          minDif = dif
+          celMaiApropiateSlot = minuteInOra(slot)
+        }
+      }
+    }
+
     // Interoghează Notion pentru programările existente la data și ora cerute
     const response = await fetch(
       `https://api.notion.com/v1/databases/${process.env.NOTION_DATABASE_ID}/query`,
@@ -240,14 +274,11 @@ export async function GET(request: NextRequest) {
     const notionData = await response.json()
     const programariExistente = notionData.results || []
 
-    // Convertim ora cerută în minute
-    function oraInMinute(oraStr: string): number {
-      const [h, m] = oraStr.split(':').map(Number)
-      return h * 60 + (m || 0)
-    }
-
-    const oraCeruta = oraInMinute(ora)
+    const oraCeruta = oraInMinuteGlobal(ora)
     const DURATA = 45 // minute
+    function oraInMinute(oraStr: string): number {
+      return oraInMinuteGlobal(oraStr)
+    }
 
     // Specialiștii ocupați — verificăm overlap cu interval ±45 minute
     const ocupati: string[] = programariExistente
@@ -331,6 +362,8 @@ export async function GET(request: NextRequest) {
       data,
       ora,
       liber: disponibili.length > 0,
+      slot_valid: eSlotValid,
+      cel_mai_apropiat_slot: celMaiApropiateSlot,
       specialist_cerut: specialistCerut,
       specialist_cerut_liber: specialistCerutLiber,
       urmator_slot_liber_specialist: urmatorSlotLiber,
