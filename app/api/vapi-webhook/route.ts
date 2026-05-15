@@ -75,6 +75,51 @@ const ECHIPA: { nume: string; departament: string }[] = [
   { nume: 'Alina Preda', departament: 'Beauty' },
 ]
 
+// ─── Conversie dată română → ISO ──────────────────────────────────────────
+
+function parseDataRomana(data: string): string | null {
+  const luni: Record<string, string> = {
+    'ianuarie': '01', 'februarie': '02', 'martie': '03',
+    'aprilie': '04', 'mai': '05', 'iunie': '06',
+    'iulie': '07', 'august': '08', 'septembrie': '09',
+    'octombrie': '10', 'noiembrie': '11', 'decembrie': '12'
+  }
+
+  const azi = new Date()
+  const an = azi.getFullYear()
+
+  const s = data.toLowerCase().trim()
+
+  if (s === 'azi' || s === 'astazi' || s === 'astăzi') {
+    return azi.toISOString().split('T')[0]
+  }
+
+  if (s === 'maine' || s === 'mâine') {
+    const maine = new Date(azi)
+    maine.setDate(azi.getDate() + 1)
+    return maine.toISOString().split('T')[0]
+  }
+
+  if (s === 'poimaine' || s === 'poimâine') {
+    const poi = new Date(azi)
+    poi.setDate(azi.getDate() + 2)
+    return poi.toISOString().split('T')[0]
+  }
+
+  // Format: "16 mai" sau "16 mai 2026"
+  const parts = s.split(' ')
+  if (parts.length >= 2) {
+    const zi = parts[0].replace(/\D/g, '').padStart(2, '0')
+    const luna = luni[parts[1]]
+    if (luna && zi) {
+      const anFinal = parts[2] ? parseInt(parts[2]) : an
+      return `${anFinal}-${luna}-${zi}`
+    }
+  }
+
+  return null
+}
+
 // ─── Formatare nume pentru agent vocal ────────────────────────────────────
 // Dacă prenumele e unic în lista de disponibili → doar prenume
 // Dacă se dublează → nume complet
@@ -185,16 +230,8 @@ export async function GET(request: NextRequest) {
         },
         body: JSON.stringify({
           filter: {
-            and: [
-              {
-                property: 'Data programare',
-                rich_text: { contains: data },
-              },
-              {
-                property: 'Ora programare',
-                rich_text: { equals: ora },
-              },
-            ],
+            property: 'Data programare',
+            date: { equals: parseDataRomana(data) || data },
           },
         }),
       }
@@ -203,11 +240,25 @@ export async function GET(request: NextRequest) {
     const notionData = await response.json()
     const programariExistente = notionData.results || []
 
-    // Specialiștii ocupați la ora respectivă
+    // Convertim ora cerută în minute
+    function oraInMinute(oraStr: string): number {
+      const [h, m] = oraStr.split(':').map(Number)
+      return h * 60 + (m || 0)
+    }
+
+    const oraCeruta = oraInMinute(ora)
+    const DURATA = 45 // minute
+
+    // Specialiștii ocupați — verificăm overlap cu interval ±45 minute
     const ocupati: string[] = programariExistente
       .map((p: any) => {
         const specialist = p.properties?.['Specialist']?.select?.name || ''
-        return specialist
+        const oraProg = p.properties?.['Ora programare']?.rich_text?.[0]?.text?.content || ''
+        if (!specialist || !oraProg) return null
+        const oraProgMin = oraInMinute(oraProg)
+        // Overlap dacă |oraCeruta - oraProg| < DURATA
+        if (Math.abs(oraCeruta - oraProgMin) < DURATA) return specialist
+        return null
       })
       .filter(Boolean)
 
@@ -334,8 +385,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (data) {
-      notionProperties['Data programare'] = {
-        rich_text: [{ text: { content: data } }],
+      const dataISO = parseDataRomana(data)
+      if (dataISO) {
+        notionProperties['Data programare'] = {
+          date: { start: dataISO },
+        }
+      } else {
+        notionProperties['Data programare'] = {
+          rich_text: [{ text: { content: data } }],
+        }
       }
     }
 
@@ -414,8 +472,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (data) {
-      updateProperties['Data programare'] = {
-        rich_text: [{ text: { content: data } }],
+      const dataISOPatch = parseDataRomana(data)
+      if (dataISOPatch) {
+        updateProperties['Data programare'] = {
+          date: { start: dataISOPatch },
+        }
+      } else {
+        updateProperties['Data programare'] = {
+          rich_text: [{ text: { content: data } }],
+        }
       }
     }
 
