@@ -243,19 +243,37 @@ export async function GET(request: NextRequest) {
       return `${h}:${m}`
     }
 
-    // Verifică dacă ora cerută e un slot valid
-    const oraCerutaMin = oraInMinuteGlobal(ora)
-    const eSlotValid = SLOTURI_FIXE.includes(oraCerutaMin)
+    // Verifică dacă e azi și filtrează sloturile din trecut
+    const aziISO = parseDataRomana('azi')
+    const dataISO = parseDataRomana(data) || data
+    const eAzi = dataISO === aziISO
 
-    // Dacă nu e slot valid, găsim cel mai apropiat slot
+    // Ora curentă în Romania
+    const acumRo = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Bucharest' }))
+    const oraAcumMin = acumRo.getHours() * 60 + acumRo.getMinutes()
+
+    // Sloturile disponibile — exclude trecutul dacă e azi
+    const SLOTURI_DISPONIBILE = eAzi
+      ? SLOTURI_FIXE.filter(s => s > oraAcumMin)
+      : SLOTURI_FIXE
+
+    // Verifică dacă ora cerută e un slot valid și nu e în trecut
+    const oraCerutaMin = oraInMinuteGlobal(ora)
+    const eSlotValid = SLOTURI_DISPONIBILE.includes(oraCerutaMin)
+
+    // Dacă nu e slot valid, găsim cel mai apropiat slot DISPONIBIL
     let celMaiApropiateSlot: string | null = null
     if (!eSlotValid) {
-      let minDif = Infinity
-      for (const slot of SLOTURI_FIXE) {
-        const dif = Math.abs(slot - oraCerutaMin)
-        if (dif < minDif) {
-          minDif = dif
-          celMaiApropiateSlot = minuteInOra(slot)
+      if (SLOTURI_DISPONIBILE.length === 0) {
+        celMaiApropiateSlot = null // Nu mai sunt sloturi azi
+      } else {
+        let minDif = Infinity
+        for (const slot of SLOTURI_DISPONIBILE) {
+          const dif = Math.abs(slot - oraCerutaMin)
+          if (dif < minDif) {
+            minDif = dif
+            celMaiApropiateSlot = minuteInOra(slot)
+          }
         }
       }
     }
@@ -352,15 +370,12 @@ export async function GET(request: NextRequest) {
             })
             .filter((m: number) => m > 0)
 
-          // Sloturi posibile 10:00 - 19:00 din 45 în 45 minute
-          const sloturi = []
-          for (let min = 10 * 60; min + 45 <= 19 * 60; min += 45) {
-            sloturi.push(min)
-          }
+          // Folosim doar sloturi disponibile (exclude trecutul dacă e azi)
+          const sloturi = SLOTURI_DISPONIBILE
 
           // Găsim cel mai apropiat slot liber — mai întâi după ora cerută, apoi înainte
           const sloturiDupa = sloturi.filter(s => s > oraCeruta)
-          const sloturiInainte = sloturi.filter(s => s < oraCeruta).reverse()
+          const sloturiInainte = sloturi.filter(s => s < oraCeruta && s > oraAcumMin).reverse()
           const ordineCautare = [...sloturiDupa, ...sloturiInainte]
 
           for (const slot of ordineCautare) {
@@ -385,6 +400,8 @@ export async function GET(request: NextRequest) {
       liber: disponibili.length > 0,
       slot_valid: eSlotValid,
       cel_mai_apropiat_slot: celMaiApropiateSlot,
+      ora_in_trecut: eAzi && oraCerutaMin <= oraAcumMin,
+      nu_mai_sunt_sloturi_azi: eAzi && SLOTURI_DISPONIBILE.length === 0,
       specialist_cerut: specialistCerut,
       specialist_cerut_liber: specialistCerutLiber,
       urmator_slot_liber_specialist: urmatorSlotLiber,
