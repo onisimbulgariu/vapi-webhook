@@ -5,6 +5,86 @@ const notion = new Client({
   auth: process.env.NOTION_TOKEN,
 })
 
+// ─── Mapare servicii → departament ────────────────────────────────────────
+
+function getDepartament(serviciu: string): string {
+  const s = serviciu.toLowerCase()
+
+  const hair = [
+    'tuns', 'haircut', 'vârfuri', 'varfuri', 'trimming', 'uscat', 'breton', 'barbă', 'barba',
+    'coafat', 'coafură', 'coafura', 'blowdry', 'împletitură', 'impletitura', 'braiding',
+    'bucle', 'waves', 'coc', 'bun', 'updo', 'mireasă', 'mireasa', 'bridal',
+    'kerastase', 'keratermie', 'keratină', 'keratina', 'keratin', 'fiolă', 'fiola', 'ampoule',
+    'scalp', 'decolorat', 'bleaching', 'decapaj', 'suvițe', 'suvite', 'highlights',
+    'foilyage', 'balayage', 'airtouch', 'vopsit', 'coloring', 'nuanțare', 'nuantare',
+    'toner', 'cover', 'sprâncene vopsit', 'spălat', 'spalat', 'washing', 'ritual',
+    'îngrijire păr', 'ingrijire par',
+  ]
+
+  const nails = [
+    'manichiură', 'manichiura', 'manicure', 'pedichiură', 'pedichiura', 'pedicure',
+    'semipermanentă', 'semipermanenta', 'semipermanent', 'ojă', 'oja', 'gel', 'tips',
+    'unghii', 'unghie', 'întreținere unghii', 'intretinere unghii',
+  ]
+
+  const beauty = [
+    'tratament facial', 'tratament față', 'tratament fata', 'curățare', 'curatare',
+    'ultrasunete', 'rf', 'led', 'hidradermoabraziune', 'microdermoabraziune',
+    'anti-rid', 'depigmentare', 'oxigenare', 'microneedeling', 'plasma',
+    'epilat', 'epilare', 'epilație', 'epilatie', 'ipl', 'bikini', 'brațe', 'brate',
+    'axilă', 'axila', 'mustață', 'mustata', 'toplip', 'picioare',
+    'anticelulitic', 'drenaj limfatic', 'tonifiere', 'bust',
+    'extensii gene', 'gene', 'machiaj', 'makeup', 'fotoregenerare',
+    'sprâncene', 'sprancene', 'pensat', 'reconstrucție sprâncene',
+  ]
+
+  if (hair.some(k => s.includes(k))) return 'Hair'
+  if (nails.some(k => s.includes(k))) return 'Nails'
+  if (beauty.some(k => s.includes(k))) return 'Beauty'
+  return 'Hair' // fallback
+}
+
+// ─── Lista echipă cu departament ──────────────────────────────────────────
+
+const ECHIPA: { nume: string; departament: string }[] = [
+  // Hair
+  { nume: 'Alina Rustei', departament: 'Hair' },
+  { nume: 'Ioana Simion', departament: 'Hair' },
+  { nume: 'Claudiu Rusu', departament: 'Hair' },
+  { nume: 'Alex Ianculescu', departament: 'Hair' },
+  { nume: 'Laurentiu Ilie', departament: 'Hair' },
+  { nume: 'Camelia Parvu', departament: 'Hair' },
+  { nume: 'Catalin Dulu', departament: 'Hair' },
+  { nume: 'Ioana Mihai', departament: 'Hair' },
+  { nume: 'Vlad Barbu', departament: 'Hair' },
+  { nume: 'Emma Pal', departament: 'Hair' },
+  { nume: 'Adrian Voicu', departament: 'Hair' },
+  { nume: 'Claudiu Silvianu', departament: 'Hair' },
+  { nume: 'Paula Ene', departament: 'Hair' },
+  { nume: 'Cristian Ispas', departament: 'Hair' },
+  { nume: 'Catalin Munteanu', departament: 'Hair' },
+  { nume: 'Ilia Ivanov', departament: 'Hair' },
+  { nume: 'George Garlasteanu', departament: 'Hair' },
+  // Nails
+  { nume: 'Gabriela Tudor', departament: 'Nails' },
+  { nume: 'Magda Oceanu', departament: 'Nails' },
+  { nume: 'Adina Nistor', departament: 'Nails' },
+  { nume: 'Mariana Luca', departament: 'Nails' },
+  // Beauty
+  { nume: 'Cristiana Mitrache', departament: 'Beauty' },
+  { nume: 'Alina Preda', departament: 'Beauty' },
+]
+
+// ─── Formatare nume pentru agent vocal ────────────────────────────────────
+// Dacă prenumele e unic în lista de disponibili → doar prenume
+// Dacă se dublează → nume complet
+
+function formateazaNume(numeComplet: string, totiDisponibilii: string[]): string {
+  const prenume = numeComplet.split(' ')[0]
+  const dubluri = totiDisponibilii.filter(n => n.split(' ')[0] === prenume)
+  return dubluri.length > 1 ? numeComplet : prenume
+}
+
 // ─── ElevenLabs WhatsApp ───────────────────────────────────────────────────
 
 async function sendElevenLabsWhatsApp(
@@ -16,7 +96,6 @@ async function sendElevenLabsWhatsApp(
 ) {
   if (!telefon || telefon === '') return
 
-  // Formatează numărul: scoate +, păstrează doar cifrele (ex: 40722123456)
   let whatsappUserId = telefon.replace(/\s/g, '').replace(/^\+/, '')
 
   const XI_API_KEY = process.env.ELEVENLABS_API_KEY!
@@ -67,9 +146,7 @@ async function gasesteProgramareByTelefon(telefon: string) {
       body: JSON.stringify({
         filter: {
           property: 'Telefon',
-          phone_number: {
-            equals: telefon,
-          },
+          phone_number: { equals: telefon },
         },
         sorts: [{ property: 'Data apel', direction: 'descending' }],
         page_size: 1,
@@ -79,6 +156,82 @@ async function gasesteProgramareByTelefon(telefon: string) {
 
   const data = await response.json()
   return data.results?.[0] || null
+}
+
+// ─── GET - verificare disponibilitate ─────────────────────────────────────
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const data = searchParams.get('data') // ex: "16 mai"
+    const ora = searchParams.get('ora')   // ex: "12:00"
+    const serviciu = searchParams.get('serviciu') // ex: "tuns"
+
+    if (!data || !ora || !serviciu) {
+      return NextResponse.json({ error: 'Parametri lipsă: data, ora, serviciu' }, { status: 400 })
+    }
+
+    const departament = getDepartament(serviciu)
+
+    // Interoghează Notion pentru programările existente la data și ora cerute
+    const response = await fetch(
+      `https://api.notion.com/v1/databases/${process.env.NOTION_DATABASE_ID}/query`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filter: {
+            and: [
+              {
+                property: 'Data programare',
+                rich_text: { contains: data },
+              },
+              {
+                property: 'Ora programare',
+                rich_text: { equals: ora },
+              },
+            ],
+          },
+        }),
+      }
+    )
+
+    const notionData = await response.json()
+    const programariExistente = notionData.results || []
+
+    // Specialiștii ocupați la ora respectivă
+    const ocupati: string[] = programariExistente
+      .map((p: any) => {
+        const specialist = p.properties?.['Specialist']?.select?.name || ''
+        return specialist
+      })
+      .filter(Boolean)
+
+    // Filtrează echipa după departament și exclude ocupații
+    const disponibili = ECHIPA
+      .filter(m => m.departament === departament)
+      .filter(m => !ocupati.includes(m.nume))
+      .map(m => m.nume)
+
+    // Formatează numele pentru agentul vocal
+    const numeFormatate = disponibili.map(n => formateazaNume(n, disponibili))
+
+    return NextResponse.json({
+      disponibili: numeFormatate,
+      disponibili_complet: disponibili,
+      departament,
+      data,
+      ora,
+      liber: disponibili.length > 0,
+    })
+  } catch (error) {
+    console.error('Verificare disponibilitate error:', error)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
 }
 
 // ─── POST principal (salvare programare nouă) ──────────────────────────────
@@ -94,6 +247,7 @@ export async function POST(request: NextRequest) {
     let telefon: string
     let motiv: string
     let serviciu = ''
+    let specialist = ''
     let data = ''
     let ora = ''
 
@@ -101,12 +255,13 @@ export async function POST(request: NextRequest) {
       nume = body.name || body.nume || 'Necunoscut'
       telefon = body.telefon || ''
       serviciu = body.serviciu || ''
+      specialist = body.specialist || ''
       data = body.data || ''
       ora = body.ora || ''
 
       const parts = []
       if (serviciu) parts.push(`Serviciu: ${serviciu}`)
-      if (body.specialist) parts.push(`Specialist: ${body.specialist}`)
+      if (specialist) parts.push(`Specialist: ${specialist}`)
       if (data) parts.push(`Data: ${data}`)
       if (ora) parts.push(`Ora: ${ora}`)
       motiv = parts.join(' | ') || 'Nedefinit'
@@ -117,6 +272,10 @@ export async function POST(request: NextRequest) {
       const structured = body.message?.analysis?.structuredData || {}
       nume = structured.nume || 'Necunoscut'
       telefon = structured.telefon || body.message?.customer?.number || ''
+      specialist = structured.specialist || ''
+      serviciu = structured.serviciu || ''
+      data = structured.data || ''
+      ora = structured.ora || ''
       const parts = []
       if (structured.firma) parts.push(`Firma: ${structured.firma}`)
       if (structured.problema) parts.push(`Problema: ${structured.problema}`)
@@ -125,29 +284,72 @@ export async function POST(request: NextRequest) {
       motiv = parts.join(' | ') || structured.motiv || 'Nedefinit'
     }
 
-    // Salvează în Notion
+    const departament = serviciu ? getDepartament(serviciu) : ''
+
+    // Găsește numele complet al specialistului din echipă (pentru câmpul Select din Notion)
+    let specialistComplet = specialist
+    if (specialist) {
+      const gasit = ECHIPA.find(m =>
+        m.nume.toLowerCase().startsWith(specialist.toLowerCase()) ||
+        m.nume.toLowerCase() === specialist.toLowerCase()
+      )
+      if (gasit) specialistComplet = gasit.nume
+    }
+
+    // Proprietăți Notion
+    const notionProperties: any = {
+      'Nume client': {
+        title: [{ text: { content: nume } }],
+      },
+      'Telefon': {
+        phone_number: telefon,
+      },
+      'Motiv apel': {
+        rich_text: [{ text: { content: motiv } }],
+      },
+      'Data apel': {
+        date: { start: new Date().toISOString() },
+      },
+      'Status': {
+        select: { name: 'Nou' },
+      },
+    }
+
+    if (serviciu) {
+      notionProperties['Serviciu'] = {
+        rich_text: [{ text: { content: serviciu } }],
+      }
+    }
+
+    if (specialistComplet) {
+      notionProperties['Specialist'] = {
+        select: { name: specialistComplet },
+      }
+    }
+
+    if (departament) {
+      notionProperties['Departament'] = {
+        select: { name: departament },
+      }
+    }
+
+    if (data) {
+      notionProperties['Data programare'] = {
+        rich_text: [{ text: { content: data } }],
+      }
+    }
+
+    if (ora) {
+      notionProperties['Ora programare'] = {
+        rich_text: [{ text: { content: ora } }],
+      }
+    }
+
     await notion.pages.create({
       parent: { database_id: process.env.NOTION_DATABASE_ID! },
-      properties: {
-        'Nume client': {
-          title: [{ text: { content: nume } }],
-        },
-        'Telefon': {
-          phone_number: telefon,
-        },
-        'Motiv apel': {
-          rich_text: [{ text: { content: motiv } }],
-        },
-        'Data apel': {
-          date: { start: new Date().toISOString() },
-        },
-        'Status': {
-          select: { name: 'Nou' },
-        },
-      },
+      properties: notionProperties,
     })
 
-    // Trimite confirmare WhatsApp prin ElevenLabs
     await sendElevenLabsWhatsApp(telefon, nume, serviciu, data, ora)
 
     return NextResponse.json({ ok: true })
@@ -164,40 +366,70 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     console.log('Modificare programare:', JSON.stringify(body))
 
-    const { telefon, serviciu, data, ora, nume } = body
+    const { telefon, serviciu, data, ora, nume, specialist } = body
 
     if (!telefon) {
       return NextResponse.json({ error: 'Telefon lipsă' }, { status: 400 })
     }
 
-    // Găsește programarea existentă
     const programareExistenta = await gasesteProgramareByTelefon(telefon)
 
     if (!programareExistenta) {
       return NextResponse.json({ error: 'Programare negăsită' }, { status: 404 })
     }
 
-    // Construiește motiv actualizat
     const parts = []
     if (serviciu) parts.push(`Serviciu: ${serviciu}`)
+    if (specialist) parts.push(`Specialist: ${specialist}`)
     if (data) parts.push(`Data: ${data}`)
     if (ora) parts.push(`Ora: ${ora}`)
     const motivNou = parts.join(' | ') || 'Nedefinit'
 
-    // Actualizează în Notion
+    const updateProperties: any = {
+      'Motiv apel': {
+        rich_text: [{ text: { content: motivNou } }],
+      },
+      'Status': {
+        select: { name: 'Modificat' },
+      },
+    }
+
+    if (serviciu) {
+      updateProperties['Serviciu'] = {
+        rich_text: [{ text: { content: serviciu } }],
+      }
+      updateProperties['Departament'] = {
+        select: { name: getDepartament(serviciu) },
+      }
+    }
+
+    if (specialist) {
+      const gasit = ECHIPA.find(m =>
+        m.nume.toLowerCase().startsWith(specialist.toLowerCase()) ||
+        m.nume.toLowerCase() === specialist.toLowerCase()
+      )
+      updateProperties['Specialist'] = {
+        select: { name: gasit ? gasit.nume : specialist },
+      }
+    }
+
+    if (data) {
+      updateProperties['Data programare'] = {
+        rich_text: [{ text: { content: data } }],
+      }
+    }
+
+    if (ora) {
+      updateProperties['Ora programare'] = {
+        rich_text: [{ text: { content: ora } }],
+      }
+    }
+
     await notion.pages.update({
       page_id: programareExistenta.id,
-      properties: {
-        'Motiv apel': {
-          rich_text: [{ text: { content: motivNou } }],
-        },
-        'Status': {
-          select: { name: 'Modificat' },
-        },
-      },
+      properties: updateProperties,
     })
 
-    // Trimite noua confirmare WhatsApp
     const numeClient = nume || 'Client'
     await sendElevenLabsWhatsApp(telefon, numeClient, serviciu, data, ora)
 
