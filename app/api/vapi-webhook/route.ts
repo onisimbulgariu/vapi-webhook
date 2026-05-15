@@ -65,19 +65,30 @@ async function sendElevenLabsWhatsApp(
 // ─── Găsește programare în Notion după număr de telefon ────────────────────
 
 async function gasesteProgramareByTelefon(telefon: string) {
-  const response = await notion.databases.query({
-    database_id: process.env.NOTION_DATABASE_ID!,
-    filter: {
-      property: 'Telefon',
-      phone_number: {
-        equals: telefon,
+  const response = await fetch(
+    `https://api.notion.com/v1/databases/${process.env.NOTION_DATABASE_ID}/query`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json',
       },
-    },
-    sorts: [{ property: 'Data apel', direction: 'descending' }],
-    page_size: 1,
-  })
+      body: JSON.stringify({
+        filter: {
+          property: 'Telefon',
+          phone_number: {
+            equals: telefon,
+          },
+        },
+        sorts: [{ property: 'Data apel', direction: 'descending' }],
+        page_size: 1,
+      }),
+    }
+  )
 
-  return response.results[0] || null
+  const data = await response.json()
+  return data.results?.[0] || null
 }
 
 // ─── POST principal (salvare programare nouă) ──────────────────────────────
