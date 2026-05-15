@@ -111,7 +111,7 @@ function parseDataRomana(data: string): string | null {
 
   // Zilele saptamanii
   const zileMap: Record<string, number> = {
-    'luni': 1, 'marti': 2, 'marti': 2, 'miercuri': 3,
+    'luni': 1, 'marti': 2, 'miercuri': 3,
     'joi': 4, 'vineri': 5, 'sambata': 6, 'duminica': 0,
   }
   const ziuaSaptamanii = zileMap[s]
